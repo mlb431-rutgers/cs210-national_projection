@@ -1,0 +1,2 @@
+target,n_train,n_test,r2,mae
+migration_rate,11808,2880,0.8947,0.00114

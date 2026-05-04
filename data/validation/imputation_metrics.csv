@@ -1,0 +1,4 @@
+target,n_train,n_test,r2,mape
+fertility_rate,6634,710,0.9949,0.1526
+mortality_rate,13243,1445,0.9663,1.8449
+lfpr,13243,1445,0.9937,0.1713
