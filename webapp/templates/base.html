@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}U.S. Demographic Projection{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js" charset="utf-8"></script>
+</head>
+<body>
+
+<header>
+  <div class="site-title">CS 210 Final Project, US Population and Labor Force</div>
+  <nav>
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="sep">|</span>
+    <a href="{{ url_for('methodology') }}">Methodology</a>
+    <span class="sep">|</span>
+    Jump to a state
+    <select onchange="if (this.value) { window.location.href = '/state/' + this.value; }">
+      <option value="">-- pick a state --</option>
+      {% for s in all_states %}
+      <option value="{{ s.state_code }}">{{ s.state_name }}</option>
+      {% endfor %}
+    </select>
+  </nav>
+</header>
+
+{% block content %}{% endblock %}
+
+<footer>
+  CS 210 final project &middot; Hannah Hollosi &amp; Michal Borkowski, Spring 2026<br>
+  Cohort Component Method &middot; Data from US Census Bureau ACS (2018, 2023) and BLS CES plus Employment Projections
+</footer>
+
+</body>
+</html>

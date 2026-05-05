@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Methodology - CS 210 Projection{% endblock %}
+{% block content %}
+
+<h1>Methodology</h1>
+
+<h2>The Cohort Component Method</h2>
+<p>We project population forward in 5-year steps for each (state, race,
+Hispanic origin, sex, age group) cell. Each step applies four demographic
+components in turn.</p>
+<ol>
+  <li>Survival is the share of each cohort that lives to the next step.
+  We compute it as <code>P * (1 - q)</code>, where <code>q</code> is the
+  5-year mortality probability.</li>
+  <li>Aging means survivors move into the next age bucket. The 85+ bucket
+  is open-ended.</li>
+  <li>Births are the new people who enter the 0 to 4 age bucket. They equal
+  the female cohort population times the annual fertility rate times five
+  years, split by the 1.05 to 1 male to female sex ratio at birth.</li>
+  <li>Migration for ages 0 to 14 uses a direct migration rate. For working
+  ages we fill the labor demand gap between BLS-projected employment and
+  labor supply, and we distribute it across cells in proportion to migration
+  propensity.</li>
+</ol>
+
+<h2>Data sources</h2>
+<table>
+  <tr><th>Table</th><th>Source</th><th>Real or synthetic</th></tr>
+  <tr><td>2023 baseline population</td><td>US Census ACS 1-year, table B03002</td><td><b>Real</b></td></tr>
+  <tr><td>2018 baseline population</td><td>US Census ACS 1-year, table B03002</td><td><b>Real</b></td></tr>
+  <tr><td>State employment 2023 to 2058</td><td>BLS CES (2023) and Employment Projections (2022 to 2032)</td><td><b>Real</b></td></tr>
+  <tr><td>Fertility rates</td><td>Calibrated to US age-specific averages</td><td>Synthetic</td></tr>
+  <tr><td>Mortality rates</td><td>Calibrated to US life-table averages</td><td>Synthetic</td></tr>
+  <tr><td>Labor force participation</td><td>Calibrated to BLS national age-sex averages</td><td>Synthetic</td></tr>
+  <tr><td>Migration rates</td><td>Derived from state employment growth signal</td><td>Synthetic</td></tr>
+</table>
+<p>Future work would replace these with real CDC WONDER mortality, ACS PUMS
+labor force participation, and SEER race-stratified populations. The
+pipeline accepts any compatible CSV with no code changes.</p>
+
+<h2>Regression-based imputation</h2>
+<p>We mask 10% of cells in each rate table and fill them in with a Ridge
+regression. The categorical features are region, race, Hispanic origin,
+sex, and age group, and they are one-hot encoded. The held-out R<sup>2</sup>
+values are below.</p>
+<table>
+  <tr><th>Target</th><th>Train n</th><th>Test n</th><th>R<sup>2</sup></th></tr>
+  {% for m in imputation_metrics %}
+  <tr><td>{{ m.target }}</td><td>{{ m.n_train }}</td><td>{{ m.n_test }}</td><td>{{ m.r2 }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Backcasting validation</h2>
+{% if national_err is not none %}
+<p>We project from the 2018 baseline forward to 2023 and compare to the
+observed 2023 ACS counts. The national absolute error is
+<b>{{ "%.2f"|format(national_err) }}%</b>.</p>
+<table>
+  <tr><th>Best 5 states (lowest error)</th><th>Worst 5 states (highest error)</th></tr>
+  <tr>
+    <td>
+      <ul>
+        {% for r in best5 %}
+        <li>{{ r.state_name }}, {{ "%.2f"|format(r.abs_pct_err|float) }}%</li>
+        {% endfor %}
+      </ul>
+    </td>
+    <td>
+      <ul>
+        {% for r in worst5 %}
+        <li>{{ r.state_name }}, {{ "%.2f"|format(r.abs_pct_err|float) }}%</li>
+        {% endfor %}
+      </ul>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<h2>Repository</h2>
+<p>The code is organized as <code>src/ccm.py</code> (the CCM engine),
+<code>src/ingest/</code> (Census and BLS adapters),
+<code>src/regression.py</code> (imputation and migration model),
+<code>notebooks/</code> (5 notebooks for setup, projection, visualization,
+imputation, and validation), and <code>webapp/</code> (this Flask app).
+See <code>README.txt</code> for run instructions.</p>
+
+{% endblock %}

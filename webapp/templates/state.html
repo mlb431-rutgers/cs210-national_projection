@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ state_name }} - CS 210 Projection{% endblock %}
+{% block content %}
+
+<h1>{{ state_name }}</h1>
+<p>{{ region }} region, {{ division }} division.
+&nbsp;<a href="{{ url_for('index') }}">&larr; back to map</a></p>
+
+<h2>Population and labor force, 2018 to 2058</h2>
+<div id="ts"></div>
+
+<h2>Age pyramid</h2>
+<form id="pyr-form" onsubmit="return false">
+  <label>Year
+    <select name="year" id="year">
+      {% for y in [2018, 2023, 2028, 2033, 2038, 2043, 2048, 2053, 2058] %}
+      <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+<div id="pyramid"></div>
+
+<script>
+const STATE = "{{ state_code }}";
+const ts = {{ ts_json | safe }};
+Plotly.newPlot("ts", ts.data, ts.layout, {responsive: true});
+let pyr = {{ pyr_json | safe }};
+Plotly.newPlot("pyramid", pyr.data, pyr.layout, {responsive: true});
+
+document.getElementById("year").addEventListener("change", async (e) => {
+  const y = e.target.value;
+  const r = await fetch(`/api/state/${STATE}?year=${y}`);
+  const fig = await r.json();
+  Plotly.react("pyramid", fig.data, fig.layout, {responsive: true});
+});
+</script>
+
+{% endblock %}

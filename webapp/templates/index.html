@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}U.S. Population &amp; Labor Force Projection{% endblock %}
+{% block content %}
+
+<h1>U.S. Population and Labor Force, 2023 to 2058</h1>
+
+<p>State-level projections built with the Cohort Component Method, anchored to
+U.S. Census ACS 2023 baselines and Bureau of Labor Statistics state employment data.</p>
+
+<div class="stats">
+  <p>The national population in 2023 was
+    {{ "{:,.0f}".format(headline.pop_2023) }} and our projection puts it at
+    {{ "{:,.0f}".format(headline.pop_2058) }} by 2058. That is a
+    {{ "%.1f"|format(headline.pop_change_pct) }} percent change.
+  </p>
+  <p>The national labor force in 2023 was
+    {{ "{:,.0f}".format(headline.lf_2023) }} and our projection puts it at
+    {{ "{:,.0f}".format(headline.lf_2058) }} by 2058. That is a
+    {{ "%.1f"|format(headline.lf_change_pct) }} percent change.
+  </p>
+</div>
+
+<h2>Projected population by state, {{ year }}</h2>
+<form method="get" action="{{ url_for('index') }}">
+  <label>Year
+    <select name="year" onchange="this.form.submit()">
+      {% for y in [2023, 2028, 2033, 2038, 2043, 2048, 2053, 2058] %}
+      <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+<div id="choropleth"></div>
+
+<h2>National totals over time</h2>
+<div id="national"></div>
+
+<h2>State growth ranking, 2023 to 2058</h2>
+<p>Top and bottom 10 states by percent change in population. Sun Belt states
+(TX, FL, AZ, NV) lead growth, while Rust Belt and rural Northeast states trail.</p>
+<div id="ranking"></div>
+
+<script>
+const chor = {{ chor_json | safe }};
+Plotly.newPlot("choropleth", chor.data, chor.layout, {responsive: true});
+const nat = {{ nat_json | safe }};
+Plotly.newPlot("national", nat.data, nat.layout, {responsive: true});
+const rank = {{ rank_json | safe }};
+Plotly.newPlot("ranking", rank.data, rank.layout, {responsive: true});
+</script>
+
+{% endblock %}
