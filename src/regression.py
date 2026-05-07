@@ -130,3 +130,90 @@ def fit_migration_model(migration: pd.DataFrame, states: pd.DataFrame,
         "y_test": y_test,
         "y_pred": y_pred,
     }
+
+def fit_migration_model_repeated(
+    migration: pd.DataFrame,
+    states: pd.DataFrame,
+    employment: pd.DataFrame,
+    n_holdout_states: int = 10,
+    seed: int = 210,
+    n_repeats: int = 10
+) -> dict:
+
+    df = _build_migration_features(migration, states, employment)
+    df = df.dropna(subset=["migration_rate"]).reset_index(drop=True)
+
+    all_states = sorted(df["state_code"].unique())
+
+    results = []
+
+    for i in range(n_repeats):
+        rng = np.random.default_rng(seed + i)
+
+        holdout_states = list(
+            rng.choice(all_states, size=n_holdout_states, replace=False)
+        )
+
+        train = df[~df["state_code"].isin(holdout_states)].copy()
+        test = df[df["state_code"].isin(holdout_states)].copy()
+
+        enc = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+
+        X_train_cat = enc.fit_transform(train[MIGRATION_CATEGORICAL_FEATURES])
+        X_train_num = train[MIGRATION_NUMERIC_FEATURES].values
+        X_train = np.hstack([X_train_cat, X_train_num])
+
+        X_test_cat = enc.transform(test[MIGRATION_CATEGORICAL_FEATURES])
+        X_test_num = test[MIGRATION_NUMERIC_FEATURES].values
+        X_test = np.hstack([X_test_cat, X_test_num])
+
+        y_train = train["migration_rate"].values
+        y_test = test["migration_rate"].values
+
+        model = RandomForestRegressor(
+            n_estimators=100,
+            max_depth=8,
+            random_state=seed + i
+        )
+
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        r2 = r2_score(y_test, y_pred)
+        mae = float(np.mean(np.abs(y_test - y_pred)))
+
+        results.append({
+            "repeat": i + 1,
+            "holdout_states": holdout_states,
+            "n_train": len(train),
+            "n_test": len(test),
+            "r2": r2,
+            "mae": mae,
+            "y_test": y_test,
+            "y_pred": y_pred,
+            "model": model,
+            "encoder": enc
+        })
+
+    results_df = pd.DataFrame([
+        {
+            "repeat": r["repeat"],
+            "holdout_states": r["holdout_states"],
+            "n_train": r["n_train"],
+            "n_test": r["n_test"],
+            "r2": r["r2"],
+            "mae": r["mae"]
+        }
+        for r in results
+    ])
+
+    return {
+        "target": "migration_rate",
+        "n_repeats": n_repeats,
+        "results": results,
+        "summary": results_df,
+        "mean_r2": results_df["r2"].mean(),
+        "median_r2": results_df["r2"].median(),
+        "mean_mae": results_df["mae"].mean(),
+        "median_mae": results_df["mae"].median()
+    }
